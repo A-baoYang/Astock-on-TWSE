@@ -19,6 +19,11 @@ ltp_model = LTP("base2")
 PRE_TRAINED_MODEL_NAME = "hfl/chinese-roberta-wwm-ext"
 tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME, do_lower_case=True)
 
+input_dir = "/home/jovyan/graph-stock-pred/Astock/data/raw"
+input_filepath = os.path.join(input_dir, f"{stock_id}-merged.csv")
+output_dir = "/home/jovyan/graph-stock-pred/Astock/data/pre"
+output_filepath = os.path.join(output_dir, f"{stock_id}-transformed.csv")
+
 
 def do_srl(text):
     # 分句產生 srl 語義標註: 因為各自句子的語義不同，只是因為同一天被接在一起
@@ -156,26 +161,26 @@ def srl_tranform(text):
 
 if __name__ == "__main__":
 
-    input_dir = "/home/jovyan/graph-stock-pred/Astock/data/raw"
-    input_filepath = os.path.join(input_dir, f"{stock_id}-merged.csv")
-    output_dir = "/home/jovyan/graph-stock-pred/Astock/data/pre"
-    output_filepath = os.path.join(output_dir, f"{stock_id}-transformed.csv")
+    # check if data has been downloaded before
+    if os.path.exists(output_filepath):
+        print(f"Data already transformed at {output_filepath}")
+    else:
 
-    data = pd.read_csv(input_filepath)
-    data["titles"] = data["titles"].fillna("")
-    data["news_count"] = data["news_count"].fillna(0.0)
-    data["affected_date"] = data["affected_date"].fillna(data["date"])
+        data = pd.read_csv(input_filepath)
+        data["titles"] = data["titles"].fillna("")
+        data["news_count"] = data["news_count"].fillna(0.0)
+        data["affected_date"] = data["affected_date"].fillna(data["date"])
 
-    for col in ["verbA0A1","verb","A0","A1"]:
-        data[col] = ""
-    for i in tqdm(range(data.shape[0])):
-        text = data.loc[i, "titles"]
-        if text:
-            a,b,c,d,e = srl_tranform(text)
-            data.loc[i, "titles"], data.loc[i, "verbA0A1"], data.loc[i, "verb"], data.loc[i, "A0"], data.loc[i, "A1"] = str(a), str(b), str(c), str(d), str(e)
-        else:
-            data.loc[i, "titles"], data.loc[i, "verbA0A1"], data.loc[i, "verb"], data.loc[i, "A0"], data.loc[i, "A1"] = "",None,None,None,None
+        for col in ["verbA0A1","verb","A0","A1"]:
+            data[col] = ""
+        for i in tqdm(range(data.shape[0])):
+            text = data.loc[i, "titles"]
+            if text:
+                a,b,c,d,e = srl_tranform(text)
+                data.loc[i, "titles"], data.loc[i, "verbA0A1"], data.loc[i, "verb"], data.loc[i, "A0"], data.loc[i, "A1"] = str(a), str(b), str(c), str(d), str(e)
+            else:
+                data.loc[i, "titles"], data.loc[i, "verbA0A1"], data.loc[i, "verb"], data.loc[i, "A0"], data.loc[i, "A1"] = "",None,None,None,None
 
-    data["stock_id"] = stock_id
-    data.to_csv(output_filepath, index=False)
-    print(f"stock {stock_id} training data transformed")
+        data["stock_id"] = stock_id
+        data.to_csv(output_filepath, index=False)
+        print(f"Stock {stock_id} training data transformed")

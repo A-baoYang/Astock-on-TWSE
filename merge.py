@@ -1,4 +1,3 @@
-#%%
 import argparse
 import datetime as dt
 import numpy as np
@@ -19,36 +18,40 @@ news_filepath = f"/home/jovyan/graph-stock-pred/Astock/data/raw/news/GOODINFO_NE
 stock1d_filepath = f"/home/jovyan/graph-stock-pred/Astock/data/raw/talib/{stock_id}-technique_indicators.csv"
 fin1d_filepath = f"/home/jovyan/graph-stock-pred/Astock/data/raw/finlab/{stock_id}-daily_financial_factors.csv"
 # fin1q_filepath = f"/home/jovyan/graph-stock-pred/Astock/data/raw/finlab/{stock_id}-quarterly_financial_factors.csv"
+output_filepath = f"/home/jovyan/graph-stock-pred/Astock/data/raw/{stock_id}-merged.csv"
 
-#%%
-stock1d = pd.read_csv(stock1d_filepath)
-stock1d = stock1d.drop("volume", axis=1)
-stock1d = stock1d.rename(columns={"Date": "date"})
-stock1d["date"] = pd.to_datetime(stock1d["date"])
-fin1d = pd.read_csv(fin1d_filepath)
-# fin1q = pd.read_csv(fin1q_filepath)
-# fin1q = fin1q.rename(columns={"date": "quarter"})
-fin1d["date"] = pd.to_datetime(fin1d["date"])
-# fin1d["quarter"] = fin1d["date"].dt.to_period("Q").dt.strftime("%Y-Q%q")
-news = pd.read_csv(news_filepath)
-news = news[["title","datetime","affected_date"]]
 
-# %%
-# fin = pd.merge(fin1d, fin1q, on="quarter", how="left")
-stock = pd.merge(stock1d, fin1d, on="date", how="left")
+if __name__ == "__main__":
 
-#%%
-news = news.groupby("affected_date").agg({"title": ["count", "\n".join]}, axis=1).reset_index()
-news.columns = ["affected_date", "news_count", "titles"]
-news["affected_date"] = pd.to_datetime(news["affected_date"])
+    # check if data has been downloaded before
+    if os.path.exists(output_filepath):
+        print(f"Data already merged at {output_filepath}")
+    else:
 
-#%% 
-merged = pd.merge(
-    stock, news, 
-    left_on="date", right_on="affected_date", how="left"
-)
-merged = merged[(merged["date"]>=start) & (merged["date"]<end)].reset_index(drop=True)
+        stock1d = pd.read_csv(stock1d_filepath)
+        stock1d = stock1d.drop("volume", axis=1)
+        stock1d = stock1d.rename(columns={"Date": "date"})
+        stock1d["date"] = pd.to_datetime(stock1d["date"])
+        fin1d = pd.read_csv(fin1d_filepath)
+        fin1d["date"] = pd.to_datetime(fin1d["date"])
+        # fin1d["quarter"] = fin1d["date"].dt.to_period("Q").dt.strftime("%Y-Q%q")
+        # fin1q = pd.read_csv(fin1q_filepath)
+        # fin1q = fin1q.rename(columns={"date": "quarter"})
+        news = pd.read_csv(news_filepath)
+        news = news[["title","datetime","affected_date"]]
 
-# %%
-merged.to_csv(f"/home/jovyan/graph-stock-pred/Astock/data/raw/{stock_id}-merged.csv", index=False)
-print(f"stock {stock_id} data merged")
+        # fin = pd.merge(fin1d, fin1q, on="quarter", how="left")
+        stock = pd.merge(stock1d, fin1d, on="date", how="left")
+
+        news = news.groupby("affected_date").agg({"title": ["count", "\n".join]}, axis=1).reset_index()
+        news.columns = ["affected_date", "news_count", "titles"]
+        news["affected_date"] = pd.to_datetime(news["affected_date"])
+
+        merged = pd.merge(
+            stock, news, 
+            left_on="date", right_on="affected_date", how="left"
+        )
+        merged = merged[(merged["date"]>=start) & (merged["date"]<end)].reset_index(drop=True)
+
+        merged.to_csv(output_filepath, index=False)
+        print(f"Stock {stock_id} data merged")
