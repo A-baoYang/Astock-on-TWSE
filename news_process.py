@@ -19,20 +19,6 @@ likely_paths = glob(os.path.join(news_dir, f"{stock_id}*.csv"))
 output_filepath = os.path.join(news_dir, f"{stock_id}-{start}-{end}.csv")
 
 
-def affect_day(x):
-    """compute affect date (~14:30 -> today / 14:30~ -> next day)
-    """
-    if x.hour == 14:
-        if x.minute >= 30:
-            return (x + dt.timedelta(days=1)).strftime("%Y-%m-%d")
-        else:
-            return x.strftime("%Y-%m-%d")
-    elif x.hour < 14:
-        return x.strftime("%Y-%m-%d")
-    else:
-        return (x + dt.timedelta(days=1)).strftime("%Y-%m-%d")
-
-
 def clean_text(x):
     special_marks = ["\u3000","\xa0"]
     return re.sub("|".join(special_marks), " ", x)
@@ -40,27 +26,38 @@ def clean_text(x):
 
 if __name__ == "__main__":
 
-    # check if data has been downloaded before
-    if os.path.exists(output_filepath):
-        print(f"News data already processed at {output_filepath}")
+    if not likely_paths:
+        print(f"{stock_id} need to Octoparse news first")
+    
     else:
-
+        # collect news which hasn't been processed
+        processed = 0
         news = pd.DataFrame()
         for path in likely_paths:
             filepath = os.path.join(news_dir, path)
-            news = pd.concat([news, pd.read_csv(filepath)])
+            _df = pd.read_csv(filepath)
             
-        news = news.drop_duplicates()
-        news.columns = ["url","media","title","datetime"]
+            if "url" not in _df.columns:
+                news = pd.concat([news, _df])
+            else:
+                processed += 1
+        
+        if news.empty:
+            print("No news data need to be processed")
+        
+        elif len(likely_paths) == processed:
+            print("News data have all been processed")
 
-        # get publish time
-        news["datetime"] = news["datetime"].apply(lambda x: x.split("\xa0")[-1][:-1])
+        else:
+            news.columns = ["url","media","title","datetime"]
+            news = news[news["datetime"].notnull()].reset_index(drop=True)
+            news = news.drop_duplicates()
 
-        # compute affect date
-        news["datetime"] = pd.to_datetime(news["datetime"])
-        news["affected_date"] = news["datetime"].apply(lambda x: affect_day(x))
-        news["affected_date"] = pd.to_datetime(news["affected_date"])
-        news["title"] = news["title"].apply(lambda x: clean_text(x))
+            # get publish time
+            news["datetime"] = news["datetime"].apply(lambda x: x.split("\xa0")[-1][:-1])
+            
+            # cleansing title text
+            news["title"] = news["title"].apply(lambda x: clean_text(x))
 
-        news.to_csv(output_filepath, index=False)
-        print(f"Stock {stock_id} news data finish processing")
+            news.to_csv(output_filepath, index=False)
+            print(f"Stock {stock_id} news data finish processing")
