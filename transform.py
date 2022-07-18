@@ -15,15 +15,6 @@ parser.add_argument('--stock_id', type=str, default="2330")
 parser_args = parser.parse_args()
 stock_id = parser_args.stock_id
 
-ltp_model = LTP("base2")
-PRE_TRAINED_MODEL_NAME = "hfl/chinese-roberta-wwm-ext"
-tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME, do_lower_case=True)
-
-input_dir = "/home/jovyan/graph-stock-pred/Astock/data/raw"
-input_filepath = os.path.join(input_dir, f"{stock_id}-merged.csv")
-output_dir = "/home/jovyan/graph-stock-pred/Astock/data/pre"
-output_filepath = os.path.join(output_dir, f"{stock_id}-transformed.csv")
-
 
 def do_srl(text):
     # 分句產生 srl 語義標註: 因為各自句子的語義不同，只是因為同一天被接在一起
@@ -161,15 +152,24 @@ def srl_tranform(text):
 
 if __name__ == "__main__":
 
+    input_dir = "/home/jovyan/graph-stock-pred/Astock/data/pre/merged"
+    input_filepath = os.path.join(input_dir, f"{stock_id}-merged.csv")
+    output_dir = "/home/jovyan/graph-stock-pred/Astock/data/pre/transformed"
+    output_filepath = os.path.join(output_dir, f"{stock_id}-transformed.csv")
+
     # check if data has been downloaded before
     if os.path.exists(output_filepath):
         print(f"Data already transformed at {output_filepath}")
+    
     else:
+        ltp_model = LTP("base2")
+        PRE_TRAINED_MODEL_NAME = "hfl/chinese-roberta-wwm-ext"
+        tokenizer = BertTokenizer.from_pretrained(PRE_TRAINED_MODEL_NAME, do_lower_case=True)
 
         data = pd.read_csv(input_filepath)
         data["titles"] = data["titles"].fillna("")
         data["news_count"] = data["news_count"].fillna(0.0)
-        data["affected_date"] = data["affected_date"].fillna(data["date"])
+        data["trade_date"] = data["trade_date"].fillna(data["date"])
 
         for col in ["verbA0A1","verb","A0","A1"]:
             data[col] = ""
