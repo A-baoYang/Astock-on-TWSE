@@ -1,6 +1,7 @@
 data/
 code/*.bin
 code/*.csv
+code/*.png
 EventTriplet/
 models/
 secret.cfg
