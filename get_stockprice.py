@@ -22,15 +22,16 @@ if __name__ == "__main__":
     # check if data has been downloaded before
     if os.path.exists(output_filepath):
         print(f"Data already fetched at {output_filepath}")
+    
     else:
         # fetch data
         data = yf.download(tickers=symbol, start=start, end=end, auto_adjust=True, interval="1d")
         data.columns = [col.lower() for col in data.columns]
 
         # Add columns: `pre_close`, `change`, `pct_chg`
-        data["pre_close"] = data["close"].shift()
-        data["change"] = data["close"] - data["pre_close"]
-        data["pct_chg"] = (data["change"] / data["pre_close"]).round(6)
+        data["close_next"] = data["close"].shift(-1)
+        data["change_next"] = data["close_next"] - data["close"]
+        data["pct_chg_next"] = (data["change_next"] / data["close"]).round(6)
 
         # store
         data.to_csv(output_filepath)
